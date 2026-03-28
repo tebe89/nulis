@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEBE STORY MAKER v15 - OpenRouter Free Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="flex flex-col md:flex-row min-h-screen">
+
+    <div id="aiPopup" class="hidden fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-[#1a1a1a] border border-gray-800 p-6 rounded-2xl text-center shadow-2xl max-w-[280px] w-full">
+            <div class="loader mb-3 mx-auto"></div>
+            <h3 class="text-white font-bold text-sm" id="popupStatus">Memproses...</h3>
+            <div id="popupTimer" class="text-yellow-500 text-lg font-black my-1">0s</div>
+            <div id="engineStatus" class="text-green-500 text-[10px] font-bold">Engine: Normal</div>
+            <button onclick="window.cancelProcess()" class="mt-4 text-[10px] text-red-500 border border-red-900/50 px-4 py-1 rounded-full hover:bg-red-950/30 transition">CANCEL PROCESS</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="space-y-6">
+            <h1 class="text-xl font-bold gold-text border-b border-gray-800 pb-2 text-center">Studio v15 OpenRouter</h1>
+            
+            <div class="space-y-3">
+                <span class="text-[10px] font-black text-gray-500 uppercase flex justify-between">🔑 OPENROUTER KEY <span id="savedTag" class="hidden text-green-600 font-bold uppercase">Saved</span></span>
+                <input type="password" id="apiKey" placeholder="sk-or-v1-..." class="w-full p-2 input-dark border-yellow-900/20" oninput="window.saveDraft()">
+                <button type="button" id="btnCheck" onclick="window.checkAndSaveApi()" class="w-full py-2 gold-bg text-xs font-bold rounded">AMBIL MODEL GRATIS</button>
+                <div id="engineWrapper" class="hidden">
+                    <select id="modelSelect" class="w-full p-2 input-dark text-yellow-500 font-bold border-yellow-900/30" onchange="window.saveDraft()"></select>
+                    <p class="text-[8px] text-gray-500 mt-1">*Menampilkan hanya model $0.00 (Free)</p>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <span class="text-[10px] font-black text-gray-500 uppercase">1. Konsep</span>
+                <input type="text" id="novelTitle" placeholder="Judul Novel" class="w-full p-2 input-dark" oninput="window.saveDraft()">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="genre" placeholder="Genre" class="p-2 input-dark" oninput="window.saveDraft()">
+                    <input type="text" id="style" placeholder="Gaya Bahasa" class="p-2 input-dark" oninput="window.saveDraft()">
+                </div>
+                <textarea id="storyIdea" rows="3" placeholder="Ide Utama..." class="w-full p-2 input-dark" oninput="window.saveDraft()"></textarea>
+            </div>
+
+            <div class="space-y-2">
+                <span class="text-[10px] font-black text-gray-500 uppercase">2. Struktur</span>
+                <input type="number" id="chapterCount" value="3" class="w-full p-2 input-dark text-center gold-text font-bold" oninput="window.saveDraft()">
+                <button type="button" onclick="window.planNovel()" class="w-full py-3 bg-blue-900 text-white text-[10px] font-bold rounded-lg border border-blue-500 shadow-xl">RANCANG ALUR</button>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t border-gray-800 text-center">
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="window.downloadFull('txt')" class="py-2 bg-gray-800 text-[10px] font-bold rounded border border-gray-700">.TXT</button>
+                    <button onclick="window.downloadFull('html')" class="py-2 border border-[#c5a059] gold-text text-[10px] font-bold rounded">.HTML</button>
+                </div>
+                <button onclick="window.clearAllData()" class="w-full py-1 text-[8px] text-red-900 uppercase font-bold mt-4">Reset Draf</button>
+            </div>
+            <div class="sidebar-footer-spacer"></div>
+        </div>
+    </div>
+
+    <div class="main-content p-6 md:p-10">
+        <div id="mainPlaceholder" class="h-full flex flex-col items-center justify-center text-center">
+            <div class="p-10 border border-gray-900 rounded-[2.5rem] max-w-lg w-full bg-[#111]/30">
+                <h2 class="text-4xl font-bold gold-text mb-4">The OpenWriter</h2>
+                <p class="text-gray-400 text-sm italic">"OpenRouter Engine Aktif. Mendukung Llama 3, Mistral, dan Gemma Free."</p>
+            </div>
+        </div>
+        <div id="novelWorkspace" class="hidden space-y-10 max-w-4xl mx-auto">
+            <div class="text-center border-b border-gray-800 pb-8">
+                <h2 id="displayTitle" class="text-5xl font-bold gold-text"></h2>
+                <p id="displayMeta" class="text-[10px] text-gray-600 mt-2"></p>
+            </div>
+            <div id="chaptersArea" class="space-y-12 pb-20"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
