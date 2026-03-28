@@ -52,64 +52,75 @@ window.loadDraft = () => {
     if (data.workspaceVisible) window.renderWorkspace(data.chapters, data.title);
 };
 
-// --- OPENROUTER ENGINE ---
+// --- OPENROUTER ENGINE (SMART FILTER) ---
 window.checkAndSaveApi = async (isSilent = false) => {
     const key = getEl('apiKey').value.trim();
     if(!key) return;
-    if(!isSilent) window.showPopup("Mengambil Model Gratis...");
+    if(!isSilent) window.showPopup("Memindai Model DeepSeek & Free...");
     try {
         const res = await fetch("https://openrouter.ai/api/v1/models");
         const data = await res.json();
         if(data.data) {
-            // FILTER HANYA MODEL GRATIS (Price 0)
-            const freeModels = data.data.filter(m => 
-                parseFloat(m.pricing.prompt) === 0 && parseFloat(m.pricing.completion) === 0
-            );
-            
+            // SMART FILTER: Mencari model yang harganya 0 ATAU mengandung kata "free"
+            const filteredModels = data.data.filter(m => {
+                const isFreePrice = parseFloat(m.pricing.prompt) === 0;
+                const isFreeName = m.id.toLowerCase().includes('free');
+                const isDeepseek = m.id.toLowerCase().includes('deepseek'); // Paksa DeepSeek masuk list
+                return isFreePrice || isFreeName || isDeepseek;
+            });
+
+            // Urutkan agar yang ada kata "free" muncul di atas
+            filteredModels.sort((a, b) => a.id.toLowerCase().includes('free') ? -1 : 1);
+
             getEl('savedTag').classList.remove('hidden');
-            getEl('modelSelect').innerHTML = freeModels.map(m => 
-                `<option value="${m.id}">${m.name}</option>`
-            ).join('');
+            getEl('modelSelect').innerHTML = filteredModels.map(m => {
+                const priceTag = parseFloat(m.pricing.prompt) === 0 ? "(FREE)" : "(CHEAP)";
+                return `<option value="${m.id}">${m.name} ${priceTag}</option>`;
+            }).join('');
             
             const savedData = JSON.parse(localStorage.getItem('tebe_v15_openrouter'));
             if(savedData && savedData.model) getEl('modelSelect').value = savedData.model;
             
             getEl('engineWrapper').classList.remove('hidden');
-            getEl('btnCheck').innerText = "OPENROUTER READY ✓";
+            getEl('btnCheck').innerText = "ENGINE READY ✓";
             getEl('btnCheck').style.backgroundColor = "#064e3b";
             window.saveDraft();
         }
-    } catch (e) { if(!isSilent) alert("Gagal koneksi ke OpenRouter."); }
+    } catch (e) { if(!isSilent) alert("Gagal mengambil model OpenRouter."); }
     finally { window.hidePopup(); }
 };
 
 async function callAI(prompt) {
     const key = getEl('apiKey').value;
     const model = getEl('modelSelect').value;
+    if(!key) throw new Error("API Key kosong.");
+    
     abortController = new AbortController();
     
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: 'POST',
         headers: {
             "Authorization": `Bearer ${key}`,
-            "HTTP-Referer": "https://tebestory.com", // Opsional
-            "X-Title": "Tebe Story Maker", // Opsional
             "Content-Type": "application/json"
         },
         signal: abortController.signal,
         body: JSON.stringify({
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.8
+            "temperature": 0.8,
+            "top_p": 1
         })
     });
     
     const data = await res.json();
-    if (data.choices) return data.choices[0].message.content.trim();
+    if (data.choices && data.choices[0]) {
+        return data.choices[0].message.content.trim();
+    }
     if (data.error) throw new Error(data.error.message);
-    throw new Error("AI Error");
+    throw new Error("Respons AI kosong.");
 }
 
+// --- CORE FUNCTIONS ---
 window.planNovel = async () => {
     const idea = getEl('storyIdea').value;
     if(!idea) return alert("Isi Ide!");
@@ -118,6 +129,7 @@ window.planNovel = async () => {
         const count = getEl('chapterCount').value;
         const prompt = `Buat alur novel dalam JSON murni: [{"label":"Prolog","judul":"...","summary":"..."},{"label":"Bab 1","judul":"...","summary":"..."},{"label":"Epilog","judul":"...","summary":"..."}]. Total bab tengah ${count}. Ide: ${idea}`;
         const raw = await callAI(prompt);
+        // Pembersihan jika AI memberi teks tambahan di luar JSON
         const jsonPart = raw.substring(raw.indexOf('['), raw.lastIndexOf(']') + 1);
         window.renderWorkspace(JSON.parse(jsonPart), getEl('novelTitle').value);
         window.saveDraft();
@@ -129,9 +141,17 @@ window.writeChapter = async (i) => {
     window.showPopup(`Menulis ${document.querySelectorAll('.ch-label')[i].innerText}...`);
     const titles = document.querySelectorAll('.ch-title-input');
     const summaries = document.querySelectorAll('.ch-summary-input');
-    const prompt = `Tulis naskah novel profesional untuk: ${titles[i].value}. Alur: ${summaries[i].value}. 
+    
+    let pastContext = "";
+    const allSummaries = document.querySelectorAll('.ch-summary-input');
+    for(let j=0; j<i; j++) { pastContext += `Bab ${j+1}: ${allSummaries[j].value}\n`; }
+
+    const prompt = `Tulis naskah novel profesional untuk: ${titles[i].value}. 
+    Alur: ${summaries[i].value}. 
+    Konteks sebelumnya: ${pastContext || "Awal cerita."}
     Genre: ${getEl('genre').value}. Gaya: ${getEl('style').value}. 
-    WAJIB: Gunakan EYD, koma, titik, dan spasi yang benar. Minimal 1500 kata. Langsung mulai cerita.`;
+    WAJIB: Gunakan EYD, koma, titik, dan spasi yang benar. Minimal 1500 kata. JANGAN menulis sapaan.`;
+    
     try {
         const res = await callAI(prompt);
         document.querySelectorAll('.ch-content-input')[i].value = res;
